@@ -1,0 +1,9 @@
+<Solution>
+  <Folder Name="/Solution Files/">
+    <File Path=".editorconfig" />
+    <File Path="README.md" />
+    <File Path=".gitignore" />
+  </Folder>
+  <Project Path="RichardSzalay.MockHttp.WebSockets.Tests/RichardSzalay.MockHttp.WebSockets.Tests.csproj" />
+  <Project Path="RichardSzalay.MockHttp.WebSockets/RichardSzalay.MockHttp.WebSockets.csproj" />
+</Solution>
