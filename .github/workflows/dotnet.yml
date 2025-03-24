@@ -25,4 +25,4 @@ jobs:
     - name: Build
       run: dotnet build --no-restore -c Release ./RichardSzalay.MockHttp.WebSockets.slnx
     - name: Test
-      run: ./RichardSzalay.MockHttp.WebSockets.Tests/bin/Debug/net9.0/RichardSzalay.MockHttp.WebSockets.Tests.exe
+      run: ./RichardSzalay.MockHttp.WebSockets.Tests/bin/Release/net9.0/RichardSzalay.MockHttp.WebSockets.Tests.exe
