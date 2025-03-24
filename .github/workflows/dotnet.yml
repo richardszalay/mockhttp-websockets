@@ -24,7 +24,7 @@ jobs:
       run: dotnet restore
     - name: Build
       run: dotnet build --no-restore -c Release ./RichardSzalay.MockHttp.WebSockets.slnx
-    - name: Pwd
-      run: pwd
+    - name: Ls
+      run: ls ./mockhttp.websockets/mockhttp.websockets/RichardSzalay.MockHttp.WebSockets.Tests/bin/Release/net9.0/
     - name: Test
-      run: ./RichardSzalay.MockHttp.WebSockets.Tests/bin/Release/net9.0/RichardSzalay.MockHttp.WebSockets.Tests.exe
+      run: dotnet test --build
