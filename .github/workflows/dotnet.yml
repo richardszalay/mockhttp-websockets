@@ -25,4 +25,15 @@ jobs:
     - name: Build
       run: dotnet build --no-restore -c Release ./RichardSzalay.MockHttp.WebSockets.slnx
     - name: Test
-      run: ./RichardSzalay.MockHttp.WebSockets.Tests/bin/Release/net9.0/RichardSzalay.MockHttp.WebSockets.Tests
+      run: ./RichardSzalay.MockHttp.WebSockets.Tests/bin/Release/net9.0/RichardSzalay.MockHttp.WebSockets.Tests --report-xunit-trx
+    - name: Test
+      run: ./RichardSzalay.MockHttp.WebSockets.Tests/bin/Release/net9.0/RichardSzalay.MockHttp.WebSockets.Tests --report-xunit-trx
+    - name: Publish test results
+      uses: dorny/test-reporter@v2
+      with:
+        name: 'Test Results'
+        path: './RichardSzalay.MockHttp.WebSockets.Tests/bin/Release/net9.0/RichardSzalay.MockHttp.WebSockets.Tests/TestResults/*.trx'
+        reporter: 'dotnet-trx'
+        badge-title: 'tests'
+        fail-on-error: 'true'
+        fail-on-empty: 'true'
