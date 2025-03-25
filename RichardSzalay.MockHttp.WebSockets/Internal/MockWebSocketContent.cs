@@ -24,14 +24,29 @@ internal class MockWebSocketContent : HttpContent
         var clientStream = new DuplexStream(responsePipe.Reader, requestPipe.Writer);
         var serverStream = new DuplexStream(requestPipe.Reader, responsePipe.Writer);
 
-        return Tuple.Create(
-            clientStream,
-            WebSocket.CreateFromStream(serverStream, new WebSocketCreationOptions
+        var serverWebSocket = WebSocket.CreateFromStream(serverStream, new WebSocketCreationOptions
+        {
+            IsServer = true,
+            SubProtocol = subProtocol
+        });
+
+        // This is needed for client-sourced Aborts to work
+        clientStream.Disposing += (sender, args) => serverStream.Dispose();
+        serverStream.Disposing += (sender, args) =>
+        {
+            // If the client starts the Close handshake and the server response with a Close,
+            // it (the server) will immediately dispose the WebSocket _before_ the client has
+            // finished reading the close message from the server.
+            // 
+            // (This workaround can likely be avoided by having DuplexStream use Pipe{Reader|Writer} directly
+            // and allowing any buffered read data to be read before an ObjectDisposedException is thrown)
+            if (serverWebSocket.State != WebSocketState.Closed)
             {
-                IsServer = true,
-                SubProtocol = subProtocol
-            })
-        );
+                clientStream.Dispose();
+            }
+        };
+
+        return Tuple.Create(clientStream, serverWebSocket);
     }
 
     /// <remarks>

@@ -1,62 +1,82 @@
 ﻿using System.Diagnostics;
 using System.Net.WebSockets;
+using System.Security.Cryptography;
 
 namespace RichardSzalay.MockHttp.WebSockets.Tests;
 
-/// <remarks>
-/// ClientWebSocket.CloseAsync will wait for the server to fully close
-/// for 1 second before continuing. Since this library aims to provide
-/// ultra-fast tests, we want to avoid that 1 second timeout.
-/// </remarks>
-public class WebSocketCloseTimeoutTests
+public class WebSocketAbortTests
 {
     [Fact]
-    public async ValueTask Starting_close_from_client_does_not_trigger_timeout()
+    public async ValueTask Reflects_server_aborted_WebSocket()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
 
         using var mockServer = new MockWebSocketServer();
         mockServer.AddEndpoint("/", async (ws, ct) =>
         {
-            while (!ws.CloseStatus.HasValue)
-            {
-                await ws.ReceiveAsync(Array.Empty<byte>(), ct);
-            }
-
-            await ws.CloseAsync(ws.CloseStatus.Value, ws.CloseStatusDescription, ct);
+            // Enough to wait for the message to start arriving but leaves data in the buffer
+            await ws.ReceiveAsync(Array.Empty<byte>(), ct);
+            ws.Abort();
         });
 
          var client = new ClientWebSocket();
 
         await client.ConnectAsync(new Uri("ws://localhost"), mockServer.ToMessageInvoker(), cancellationToken);
 
-        var stopwatch = Stopwatch.StartNew();
-        await client.CloseAsync(WebSocketCloseStatus.NormalClosure, "Done", cancellationToken);
-        Assert.True(stopwatch.Elapsed.TotalSeconds < 1, "ClientWebSocket.CloseAsync internal timeout triggered unexpectedly");
+        await client.SendAsync(new byte[] { 0x1, 0x2, 0x3 }, WebSocketMessageType.Binary, true, cancellationToken);
+        
+        var ex = await Assert.ThrowsAsync<WebSocketException>(async () =>
+            await client.ReceiveAsync(Array.Empty<byte>(), cancellationToken));
+        
+        Assert.Equal(WebSocketError.ConnectionClosedPrematurely, ex.WebSocketErrorCode);
+        Assert.Equal(WebSocketState.Aborted, client.State);
     }
-
+    
+    /// <remarks>
+    /// This test needs a little TaskCompletionSource-finessing to control _when_ the abort signal is transmitted
+    /// so that we can assert it properly, but the important thing that it fails in the expected way.
+    /// </remarks>
     [Fact]
-    public async ValueTask Starting_close_from_server_does_not_trigger_timeout()
+    public async ValueTask Reflects_client_aborted_WebSocket()
     {
         var cancellationToken = TestContext.Current.CancellationToken;
+        
+        TaskCompletionSource<Func<Task>> serverCompletionSource = new();
+        TaskCompletionSource clientCompletionSource = new();
 
         using var mockServer = new MockWebSocketServer();
         mockServer.AddEndpoint("/", async (ws, ct) =>
         {
-            await ws.CloseAsync(WebSocketCloseStatus.NormalClosure, "Done", ct);
+            // Ths will be called by the client so we can assert the result within the ExecutionContext of the test
+            serverCompletionSource.SetResult(async () =>
+            {
+                var ex = await Assert.ThrowsAsync<WebSocketException>(async () =>
+                    await ws.ReceiveAsync(Array.Empty<byte>(), ct));
+        
+                Assert.Equal(WebSocketError.ConnectionClosedPrematurely, ex.WebSocketErrorCode);
+                Assert.Equal(WebSocketState.Aborted, ws.State);
+            });
+
+            // Wait for the client to finish
+            await clientCompletionSource.Task;
         });
 
         var client = new ClientWebSocket();
 
-        await client.ConnectAsync(new Uri("wss://localhost"), mockServer.ToMessageInvoker(), cancellationToken);
+        await client.ConnectAsync(new Uri("ws://localhost"), mockServer.ToMessageInvoker(), cancellationToken);
 
-        var stopwatch = Stopwatch.StartNew();
-        
-        var receiveResult = await client.ReceiveAsync(Array.Empty<byte>(), cancellationToken);
+        await client.SendAsync(new byte[] { 0x1, 0x2, 0x3 }, WebSocketMessageType.Binary, true, cancellationToken);
+        client.Abort();
 
-        Assert.Equal(WebSocketMessageType.Close, receiveResult.MessageType);
-        
-        await client.CloseAsync(client.CloseStatus!.Value, client.CloseStatusDescription, cancellationToken);
-        Assert.True(stopwatch.Elapsed.TotalSeconds < 1, "ClientWebSocket.CloseAsync internal timeout triggered unexpectedly");
+        try
+        {
+            // Assert from the server
+            await (await serverCompletionSource.Task)();
+        }
+        finally
+        {
+            // Let the server finish up
+            clientCompletionSource.SetResult();
+        }
     }
 }
