@@ -1,4 +1,5 @@
 ﻿using System.Net.WebSockets;
+using System.Reflection.Metadata;
 using System.Text.Json;
 
 namespace RichardSzalay.MockHttp.WebSockets.Serialization;
@@ -38,4 +39,7 @@ public class JsonWebSocket : SerializedWebSocket
 
         return ValueTask.FromResult(WebSocketMessageType.Text);
     }
+    
+    public static WebSocketMessageLoop<JsonWebSocket, TBaseClass> MessageLoop<TBaseClass>(JsonSerializerOptions jsonOptions) =>
+        new(ws => new JsonWebSocket(ws, jsonOptions));
 }

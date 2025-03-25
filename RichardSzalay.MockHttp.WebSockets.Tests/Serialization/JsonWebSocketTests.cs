@@ -3,7 +3,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using RichardSzalay.MockHttp.WebSockets.Serialization;
 
-namespace RichardSzalay.MockHttp.WebSockets.Tests.Examples;
+namespace RichardSzalay.MockHttp.WebSockets.Tests.Serialization;
 
 /// <summary>
 /// This test demonstrates sending and receiving JSON messages using the JsonWebSocket class.
@@ -41,6 +41,35 @@ public class JsonWebSocketTests
                 await jsonServer.RawWebSocket.CloseAsync(jsonServer.RawWebSocket.CloseStatus.Value, jsonServer.RawWebSocket.CloseStatusDescription, ct);
             }
         });
+
+        var client = new ClientWebSocket();
+        await client.ConnectAsync(new Uri("ws://localhost"), mockServer.ToMessageInvoker(), CancellationToken.None);
+        var jsonClient = new JsonWebSocket(client, JsonOptions);
+
+        var message = new SimpleMessage("Test");
+
+        for (var i = 0; i < 3; i++)
+        {
+            // Client appends a !
+            await jsonClient.SendAsync(new SimpleMessage(message.Text + "!"), cancellationToken);
+            
+            // Server appends a ?
+            message = await jsonClient.ExpectAsync<SimpleMessage>(cancellationToken);
+        }
+        
+        Assert.Equal("Test!?!?!?", message.Text);
+
+        await jsonClient.RawWebSocket.CloseAsync(WebSocketCloseStatus.NormalClosure, "We're done here", cancellationToken);
+    }
+    
+    [Fact]
+    public async ValueTask Supports_EventLoop()
+    {
+        var mockServer = MockWebSocketServer.ForEndpoint(JsonWebSocket.MessageLoop<SimpleMessage>(JsonOptions)
+            .On<SimpleMessage>(async (message, jws, ct) =>
+                await jws.SendAsync(new SimpleMessage(message.Text + "?"), ct))
+            .AutoClose()
+        );
 
         var client = new ClientWebSocket();
         await client.ConnectAsync(new Uri("ws://localhost"), mockServer.ToMessageInvoker(), CancellationToken.None);
