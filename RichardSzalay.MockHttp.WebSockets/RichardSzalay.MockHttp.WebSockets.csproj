@@ -5,5 +5,19 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'">
+    <PackageVersion>1.0.0-pre1</PackageVersion>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <Authors>richardszalay</Authors>
+    <Title>RichardSzalay.MockHttp.WebSockets</Title>
+    <PackageDescription>Write blazing fast tests for ClientWebSocket with no abstractions</PackageDescription>
+    <Copyright>2025 Richard Szalay</Copyright>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <PackageReleaseNotes>$([System.IO.File]::ReadAllText("$(MSBuildProjectDirectory)/../CHANGELOG"))</PackageReleaseNotes>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="..\README.md" Pack="true" PackagePath="\"/>
+    <None Include="..\LICENSE" Pack="true" PackagePath="\"/>
+  </ItemGroup>
 
 </Project>

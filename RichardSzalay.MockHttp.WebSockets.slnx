@@ -4,6 +4,8 @@
     <File Path="README.md" />
     <File Path=".gitignore" />
     <File Path="LICENSE" />
+    <File Path=".github\workflows\dotnet.yml" />
+    <File Path="CHANGELOG" />
   </Folder>
   <Project Path="RichardSzalay.MockHttp.WebSockets.Tests/RichardSzalay.MockHttp.WebSockets.Tests.csproj" />
   <Project Path="RichardSzalay.MockHttp.WebSockets/RichardSzalay.MockHttp.WebSockets.csproj" />

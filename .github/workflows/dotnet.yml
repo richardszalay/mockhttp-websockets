@@ -35,3 +35,13 @@ jobs:
         badge-title: 'tests'
         fail-on-error: 'true'
         fail-on-empty: 'true'
+    - name: Package
+      run: dotnet pack -c Release --no-build ./RichardSzalay.MockHttp.WebSockets/RichardSzalay.MockHttp.WebSockets.csproj
+      if: github.event_name != 'pull_request' && matrix.os == 'ubuntu-latest'
+
+    - name: "Upload artifact: RichardSzalay.MockHttp.nupkg"
+      uses: actions/upload-artifact@v3.1.1
+      with:
+        name: RichardSzalay.MockHttp.WebSockets.nupkg
+        path: RichardSzalay.MockHttp.WebSockets/bin/Release/*.nupkg
+      if: github.event_name != 'pull_request' && matrix.os == 'ubuntu-latest'
