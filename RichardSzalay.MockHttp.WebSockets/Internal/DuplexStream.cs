@@ -108,7 +108,7 @@ internal class DuplexStream : Stream
 
     protected override void Dispose(bool disposing)
     {
-        if (disposing && !disposed)
+        if (disposing && !Interlocked.CompareExchange(ref disposed, true, false))
         {
             disposeTcs.SetResult();
             this.writer.Dispose();
