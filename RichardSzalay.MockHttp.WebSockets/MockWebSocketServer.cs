@@ -22,6 +22,16 @@ public class MockWebSocketServer : HttpMessageHandler
     /// the WebSocket connection will be shut down.</param>
     public static MockWebSocketServer ForEndpoint(AcceptWebSocketHandler acceptHandler)
         => ForEndpoint(new MockWebSocketEndpoint(acceptHandler));
+
+    /// <summary>
+    /// Creates a MockWebSocketServer with a single <see cref="MockWebSocketEndpoint"/> at the default path (/),
+    /// using the provided <see cref="AcceptWebSocketHandler"/> to 'run' the endpoint.
+    /// </summary>
+    /// <param name="path">The server path to apply the endpoint</param>
+    /// <param name="acceptHandler">An async delegate that will accept WebSocket connections from a remote client. When this handler exits,
+    /// the WebSocket connection will be shut down.</param>
+    public static MockWebSocketServer ForEndpoint(string path, AcceptWebSocketHandler acceptHandler)
+        => ForEndpoint(path, new MockWebSocketEndpoint(acceptHandler));
     
     /// <summary>
     /// Creates a MockWebSocketServer with a single <see cref="MockWebSocketEndpoint"/> at the default path (/),
@@ -34,6 +44,19 @@ public class MockWebSocketServer : HttpMessageHandler
     /// the WebSocket connection will be shut down.</param>
     public static MockWebSocketServer ForEndpoint(ValidateWebSocketRequestHandler validateHandler, AcceptWebSocketHandler acceptHandler)
             => ForEndpoint(new MockWebSocketEndpoint(validateHandler, acceptHandler));
+    
+    /// <summary>
+    /// Creates a MockWebSocketServer with a single <see cref="MockWebSocketEndpoint"/> at the default path (/),
+    /// using the provided <see cref="AcceptWebSocketHandler"/> to 'run' the endpoint and a <see cref="ValidateWebSocketRequestHandler"/>
+    /// to validate the incoming request.
+    /// </summary>
+    /// <param name="path">The server path to apply the endpoint</param>
+    /// <param name="validateHandler">A delegate that will validate the request before a WebSocket connection is accepted. Commonly used for
+    /// header (authentication or signature) validation</param>
+    /// <param name="acceptHandler">An async delegate that will accept WebSocket connections from a remote client. When this handler exits,
+    /// the WebSocket connection will be shut down.</param>
+    public static MockWebSocketServer ForEndpoint(string path, ValidateWebSocketRequestHandler validateHandler, AcceptWebSocketHandler acceptHandler)
+        => ForEndpoint(path, new MockWebSocketEndpoint(validateHandler, acceptHandler));
     
     /// <summary>
     /// Creates a MockWebSocketServer with a single <see cref="MockWebSocketEndpoint"/> at the default path (/)
@@ -55,7 +78,7 @@ public class MockWebSocketServer : HttpMessageHandler
     }
     
     /// <summary>
-    /// All the WebSockets that have been connected to this instance
+    /// All the server WebSockets that have been connected to this instance
     /// </summary>
     public IEnumerable<WebSocket> WebSockets => webSockets.AsEnumerable();
     
@@ -116,6 +139,24 @@ public class MockWebSocketServer : HttpMessageHandler
 
             await Task.Delay(100, cancellationToken);
         }
+    }
+
+    /// <summary>
+    /// Waits for all connected server WebSockets to enter a final state (Aborted or Closed)
+    /// </summary>
+    /// <returns>An unordered list of states of all connected server WebSockets</returns>
+    public async Task<IReadOnlyList<WebSocketState>> WaitForFinalStatesAsync(CancellationToken cancellationToken = default)
+    {
+        var allValid = false;
+
+        while (!allValid)
+        {
+            allValid = WebSockets.All(ws => ws.State is WebSocketState.Closed or WebSocketState.Aborted);
+
+            await Task.Delay(50, cancellationToken);
+        }
+
+        return WebSockets.Select(ws => ws.State).ToList().AsReadOnly();
     }
 
     protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
