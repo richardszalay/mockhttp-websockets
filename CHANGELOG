@@ -1,3 +1,7 @@
 0.1.0-pre1
   - Initial release for testing and feedback
   - NOTE: Public APIs are subject to change until 1.0.0
+
+0.1.0-pre2
+  - Add WaitForFinalStatesAsync utility method
+  - Fix race condition in DuplexStream.DisposeAsync
